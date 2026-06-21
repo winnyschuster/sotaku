@@ -4,15 +4,15 @@ See `README.md` for the current SOTA path, key files, and headline results.
 
 ## Environment
 
-- Run `source venv/bin/activate` before any `python3` command.
+- Run `source venv/bin/activate` before running Python commands.
 
 ## Modal
 
 - Use `modal run --detach ...` for training so runs survive client disconnection.
 - `--detach` is also the safer default for longer eval and analysis runs.
-- Modal can preempt GPU workers at any time; design training to resume from checkpoints.
-- Set a long enough function timeout for training. In practice this repo uses the 24h maximum.
-- Volumes persist indefinitely; treat the output volume as the source of truth for checkpoints and logs.
+- Modal can preempt GPU workers at any time, and GPU jobs cannot opt out. Modal automatically restarts a preempted job with the same input, but design training to resume from checkpoints.
+- Modal's default function timeout is 5 minutes, so set a longer timeout for training. In practice this repo uses the 24h maximum.
+- Volumes persist indefinitely without automatic eviction; treat the output volume as the source of truth for checkpoints and logs.
 - A local output stream can die while the Modal worker keeps running. Check `modal container list` and `modal volume ls` for true status.
 - `modal app logs` only works while the app is still active. For detached or finished runs, poll the log file from the volume with `modal volume get`.
 - Keep experiment code Modal-agnostic: accept an `output_dir` argument and let the Modal wrapper point it at the mounted volume path.
@@ -27,6 +27,6 @@ See `README.md` for the current SOTA path, key files, and headline results.
 ## `torch.compile`
 
 - `torch.compile(model)` renames parameters from `foo.weight` to `_orig_mod.foo.weight`.
-- Any code that depends on `model.named_parameters()` must be initialized after `torch.compile()`, not before.
+- Any code that depends on `model.named_parameters()`—such as EMA, custom optimizers, or weight manipulation—must be initialized after `torch.compile()`, not before.
 - When saving checkpoints or final model weights, strip the `_orig_mod.` prefix:
   `k.replace('_orig_mod.', ''): v for k, v in model.state_dict().items()`
